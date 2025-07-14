@@ -44,13 +44,13 @@ flowchart TD
     
     subgraph "Processing Layer"
         R[TaskOrchestrator Service]
-        S[Celery Workers<br/>(6 Queues)]
-        T[LLM Manager<br/>(Ollama Primary)]
+        S[Celery Workers - 6 Queues]
+        T[LLM Manager - Ollama Primary]
     end
     
     subgraph "Data Layer"
-        U[PostgreSQL<br/>(Auto-Migration)]
-        V[Neo4j Knowledge Graph<br/>(5-Phase Analysis)]
+        U[PostgreSQL - Auto-Migration]
+        V[Neo4j Knowledge Graph - 5-Phase Analysis]
         W[Redis Cache & Broker]
     end
     
@@ -796,10 +796,10 @@ flowchart TD
     end
     
     subgraph "Relationship Updates"
-        K[TASK -[:GENERATES]-> FILE]
-        L[FILE -[:DEPENDS_ON]-> FILE]
-        M[TASK -[:USES_TECH]-> TECHNOLOGY]
-        N[PROJECT -[:LEARNS_FROM]-> PATTERN]
+        K[TASK GENERATES FILE]
+        L[FILE DEPENDS_ON FILE]
+        M[TASK USES_TECH TECHNOLOGY]
+        N[PROJECT LEARNS_FROM PATTERN]
     end
     
     B --> G
