@@ -1,596 +1,634 @@
 # CrewWork Architecture Diagrams
 
-## Super High-Level Platform Overview
+## System Overview
+
+CrewWork is an AI-powered autonomous development platform built on a microservices architecture. The system orchestrates complex development tasks through intelligent agents, provides comprehensive code intelligence via a knowledge graph, and enables real-time collaboration.
 
 ```mermaid
-flowchart LR
-    subgraph Users
-        DEV[Developers]
-        API[API Clients]
-    end
-    
-    subgraph "CrewWork Platform"
-        PLATFORM[AI-Powered Development Platform<br/>with Knowledge Graph Intelligence]
-    end
-    
-    subgraph "External Services"
-        GH[GitHub]
-        LLM[LLM Providers<br/>Ollama/OpenAI/Anthropic]
-    end
-    
-    DEV --> PLATFORM
-    API --> PLATFORM
-    PLATFORM <--> GH
-    PLATFORM <--> LLM
-```
-
-## System Architecture Overview
-
-```mermaid
-flowchart TB
+graph TB
     subgraph "Client Layer"
-        WEB[Web UI<br/>React + TypeScript]
-        API_CLIENT[API Clients<br/>REST + WebSocket]
+        UI[React/TypeScript Frontend]
+        CLI[Command Line Interface]
     end
     
     subgraph "API Gateway"
-        NGINX[Nginx Reverse Proxy<br/>:80]
+        NGINX[Nginx Reverse Proxy]
+        WS[WebSocket Server]
     end
     
     subgraph "Application Layer"
-        FASTAPI[FastAPI Server<br/>:8000]
-        WS[WebSocket Handler<br/>Enhanced Manager]
+        API[FastAPI Backend]
+        CELERY[Celery Workers]
+        BEAT[Celery Beat Scheduler]
     end
     
-    subgraph "Processing Layer"
-        CELERY[Celery Workers<br/>Multi-Queue]
-        BEAT[Celery Beat<br/>Scheduler]
-        FLOWER[Flower Monitor<br/>:5555]
+    subgraph "Intelligence Layer"
+        ORCH[Task Orchestrator]
+        KG[Knowledge Graph Service]
+        LLM[LLM Manager]
     end
     
     subgraph "Data Layer"
-        PG[(PostgreSQL<br/>Primary Database)]
-        REDIS[(Redis<br/>Cache & Queue)]
-        NEO4J[(Neo4j<br/>Knowledge Graph)]
+        PG[(PostgreSQL)]
+        REDIS[(Redis)]
+        FS[File System]
     end
     
-    subgraph "AI Layer"
-        OLLAMA[Ollama<br/>Local LLM<br/>:11434]
-        LLM[LLM Manager<br/>Routing & Fallback]
+    subgraph "External Services"
+        GH[GitHub API]
+        OLLAMA[Ollama LLM]
+        OPENAI[OpenAI/Anthropic]
     end
     
-    WEB --> NGINX
-    API_CLIENT --> NGINX
-    NGINX --> FASTAPI
+    UI --> NGINX
+    CLI --> NGINX
+    NGINX --> API
     NGINX --> WS
-    FASTAPI --> CELERY
+    
+    API --> ORCH
+    API --> KG
+    API --> CELERY
+    
+    ORCH --> LLM
+    ORCH --> CELERY
+    
     CELERY --> REDIS
     BEAT --> REDIS
-    FLOWER --> REDIS
-    FASTAPI --> PG
-    FASTAPI --> REDIS
-    FASTAPI --> NEO4J
-    FASTAPI --> LLM
+    
+    API --> PG
+    API --> REDIS
+    KG --> PG
+    
     LLM --> OLLAMA
+    LLM --> OPENAI
+    API --> GH
 ```
 
-## Detailed Service Architecture
+## Core Services Architecture
 
 ```mermaid
-flowchart TB
-    subgraph "Frontend Services"
-        REACT[React Application<br/>Optimized Contexts]
-        WS_CLIENT[WebSocket Client<br/>Channel Subscriptions]
-        API_SERVICE[API Service Layer]
-    end
-    
-    subgraph "API Layer"
-        subgraph "Routers"
-            AUTH_ROUTER[Auth Router]
-            TASK_ROUTER[Tasks Router]
-            PROJECT_ROUTER[Projects Router]
-            GITHUB_ROUTER[GitHub Router]
-            MONITOR_ROUTER[Monitoring Router]
-            KG_ROUTER[Knowledge Graph Router]
-            INTEL_ROUTER[Intelligence Router]
+graph LR
+    subgraph "Service Layer"
+        subgraph "Core Services"
+            TS[Task Service]
+            PS[Project Service]
+            GS[GitHub Service]
+            US[User Service]
         end
         
-        subgraph "Middleware"
-            CSRF[CSRF Protection]
-            RATE_LIMIT[Rate Limiter]
-            AUTH_MW[Auth Middleware]
+        subgraph "Intelligence Services"
+            SS[Semantic Search]
+            CAS[Code Analysis]
+            PLS[Pattern Learning]
+            TES[Task Enhancement]
+        end
+        
+        subgraph "Infrastructure Services"
+            LM[LLM Manager]
+            CS[Cache Service]
+            NS[Notification Service]
+            MS[Monitoring Service]
+        end
+        
+        subgraph "Quality Services"
+            QA[QA Service]
+            CR[Code Review]
+            SEC[Security Scanner]
+            VAL[Validation Service]
         end
     end
     
-    subgraph "Core Services"
-        TASK_ORCH[Task Orchestrator<br/>Direct Processing]
-        CODE_GEN[Code Generation Service]
-        GITHUB_SVC[GitHub Service]
-        LLM_MGR[LLM Manager<br/>Model Routing]
-        KG_SVC[Neo4j Knowledge Graph<br/>Modular Architecture]
-        UNIFIED_SEC[Unified Security Service<br/>Multi-Scanner]
-        CODE_REVIEW[Code Reviewer<br/>Quality Analysis]
+    subgraph "Base Layer"
+        BS[Base Service]
+        DI[Dependency Injection]
+        EH[Error Handler]
     end
     
-    subgraph "Analysis Services"
-        ANALYZER_ORCH[Analyzer Orchestrator<br/>5-Phase Analysis]
-        PY_ANALYZER[Python Analyzer<br/>Radon Metrics]
-        JS_ANALYZER[JavaScript Analyzer<br/>React/TS Support]
-        CONFIG_ANALYZER[Config Analyzer<br/>Tech Detection]
-        TREE_SITTER[Tree-sitter Analyzer<br/>AST Parsing]
-    end
+    TS --> BS
+    PS --> BS
+    GS --> BS
+    US --> BS
     
-    subgraph "Background Processing"
-        subgraph "Task Queues"
-            DEFAULT_Q[default]
-            CODE_GEN_Q[code_generation]
-            VALIDATION_Q[validation]
-            DEPLOY_Q[deployment]
-            KG_Q[knowledge_graph]
-            PRIORITY_Q[priority]
-        end
-    end
+    SS --> DI
+    CAS --> DI
+    PLS --> DI
+    TES --> DI
     
-    REACT --> API_SERVICE
-    API_SERVICE --> AUTH_ROUTER
-    API_SERVICE --> TASK_ROUTER
-    WS_CLIENT --> WS
-    
-    TASK_ROUTER --> TASK_ORCH
-    PROJECT_ROUTER --> KG_SVC
-    KG_ROUTER --> KG_SVC
-    INTEL_ROUTER --> ANALYZER_ORCH
-    
-    TASK_ORCH --> CODE_GEN
-    TASK_ORCH --> UNIFIED_SEC
-    CODE_GEN --> LLM_MGR
-    TASK_ORCH --> DEFAULT_Q
-    CODE_GEN --> CODE_GEN_Q
-    
-    ANALYZER_ORCH --> PY_ANALYZER
-    ANALYZER_ORCH --> JS_ANALYZER
-    ANALYZER_ORCH --> CONFIG_ANALYZER
-    ANALYZER_ORCH --> TREE_SITTER
+    BS --> EH
+    DI --> EH
 ```
 
-## Task Processing Flow (Celery-Based)
+## Task Processing Flow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant API as FastAPI
-    participant TO as Task Orchestrator
+    participant API
+    participant Orchestrator
     participant Celery
-    participant LLM as LLM Manager
+    participant LLM
     participant KG as Knowledge Graph
     participant GitHub
-    participant WS as WebSocket
-
-    User->>API: Create Task Request
-    API->>TO: Process Task
-    TO->>KG: Get Project Context & FILE Nodes
-    KG-->>TO: Context, Patterns & Code Structure
-    TO->>Celery: Queue Task (specific queue)
     
-    Note over Celery: Distributed Processing<br/>with Retry Logic
+    User->>API: Create Task
+    API->>Orchestrator: Process Task
     
-    Celery->>LLM: Enhance Task Description
-    LLM-->>Celery: Enhanced Description
-    Celery->>WS: Status: Processing
+    Orchestrator->>KG: Get Context
+    KG-->>Orchestrator: Project Context
     
-    Celery->>KG: Get Success Patterns
-    KG-->>Celery: Previous Solutions
+    Orchestrator->>LLM: Enhance Task
+    LLM-->>Orchestrator: Enhanced Description
     
-    Celery->>LLM: Generate Code with Context
-    LLM-->>Celery: Generated Code
+    Orchestrator->>Celery: Queue Task
     
-    Celery->>Celery: Validate Generated Code
+    loop Task Execution
+        Celery->>LLM: Generate Code
+        LLM-->>Celery: Code Files
+        
+        Celery->>KG: Update Symbols
+        
+        Celery->>GitHub: Commit Changes
+        GitHub-->>Celery: Commit Status
+        
+        Celery->>API: Update Progress
+        API->>User: WebSocket Update
+    end
     
-    Celery->>GitHub: Create Branch
-    GitHub-->>Celery: Branch Created
-    
-    Celery->>GitHub: Commit Code
-    GitHub-->>Celery: Commit Success
-    
-    Celery->>KG: Update Knowledge<br/>Create FILE Nodes
-    Celery->>WS: Status: Completed
-    WS-->>User: Real-time Update
+    Celery->>API: Task Complete
+    API->>User: Final Status
 ```
 
 ## Knowledge Graph Architecture
 
 ```mermaid
 graph TD
-    subgraph "Core Nodes"
-        PROJECT[PROJECT Node<br/>languages, frameworks, technologies]
-        USER[USER Node]
-        TASK[TASK Node<br/>enhanced metadata]
-        FILE[FILE Node<br/>code metrics, dependencies]
+    subgraph "Symbol Storage (PostgreSQL)"
+        ST[Symbols Table]
+        RT[Relationships Table]
+        PT[Patterns Table]
+        ET[Embeddings Table]
     end
     
-    subgraph "Code Structure Nodes"
-        MODULE[MODULE Node<br/>hierarchy info]
-        CLASS[CLASS Node<br/>methods, complexity]
-        FUNCTION[FUNCTION Node<br/>calls, side effects]
-        API_ENDPOINT[API_ENDPOINT Node<br/>routes, methods]
+    subgraph "Graph Services"
+        SS[Symbol Service]
+        QS[Query Service]
+        AS[Analysis Service]
+        ES[Embedding Service]
     end
     
-    subgraph "Analysis Nodes"
-        TECH[TECHNOLOGY Node<br/>dynamic detection]
-        ERROR[ERROR Node<br/>learning patterns]
-        PATTERN[PATTERN Node<br/>success/failure]
-        CONFIG[CONFIGURATION Node<br/>settings, scripts]
-        VULN[VULNERABILITY Node<br/>security issues]
+    subgraph "Analyzers"
+        PY[Python Analyzer]
+        TS[TypeScript Analyzer]
+        CSS[CSS Analyzer]
+        CFG[Config Analyzer]
     end
     
-    PROJECT -->|OWNS| PROJECT
-    PROJECT -->|HAS_TASK| TASK
-    PROJECT -->|HAS_FILE| FILE
-    PROJECT -->|USES_TECHNOLOGY| TECH
-    PROJECT -->|HAS_MODULE| MODULE
-    
-    USER -->|OWNS| PROJECT
-    USER -->|CREATED| TASK
-    
-    TASK -->|GENERATES| FILE
-    TASK -->|DEPENDS_ON| TASK
-    TASK -->|LEARNS_FROM| ERROR
-    TASK -->|APPLIES| PATTERN
-    
-    FILE -->|CONTAINS| MODULE
-    FILE -->|HAS_CONFIG| CONFIG
-    FILE -->|IMPORTS| FILE
-    MODULE -->|CONTAINS| CLASS
-    MODULE -->|CONTAINS| FUNCTION
-    MODULE -->|CONTAINS| API_ENDPOINT
-    
-    CLASS -->|HAS_METHOD| FUNCTION
-    FUNCTION -->|CALLS| FUNCTION
-    
-    PATTERN -->|DISCOVERED_IN| PROJECT
-    ERROR -->|OCCURRED_IN| TASK
-    VULN -->|FOUND_IN| FILE
-```
-
-## LLM Integration Architecture
-
-```mermaid
-flowchart TB
-    subgraph "LLM Manager Infrastructure"
-        MGR[LLM Manager<br/>core/services/infrastructure/llm_manager.py]
-        ROUTER[Provider Router<br/>YAML Configuration]
-        MODEL_SELECT[Model Selection<br/>Task-Type Mapping]
-        FALLBACK[Fallback Chain<br/>3-Level Cascade]
+    subgraph "Graph Operations"
+        CREATE[Create Nodes/Edges]
+        QUERY[Query Relationships]
+        ANALYZE[Pattern Discovery]
+        SEARCH[Semantic Search]
     end
     
-    subgraph "Providers"
-        subgraph "Primary - Local"
-            OLLAMA[Ollama<br/>qwen2.5-coder:32b<br/>Auto-pull enabled]
-        end
-        
-        subgraph "Fallback - Cloud"
-            OPENAI[OpenAI API<br/>gpt-4o]
-            ANTHROPIC[Anthropic API<br/>claude-3-5-sonnet]
-        end
-    end
+    AS --> PY
+    AS --> TS
+    AS --> CSS
+    AS --> CFG
     
-    subgraph "Task Types"
-        CODE_GEN[Code Generation<br/>→ qwen2.5-coder]
-        ENHANCE[Task Enhancement<br/>→ qwen2.5-coder]
-        ANALYSIS[Code Analysis<br/>→ qwen2.5-coder]
-        REVIEW[Code Review<br/>→ qwen2.5-coder]
-        SEC_ANALYSIS[Security Analysis<br/>→ qwen2.5-coder]
-        SCRIPT_SELECT[Script Selection<br/>→ Container Config]
-    end
+    SS --> ST
+    SS --> RT
+    QS --> PT
+    ES --> ET
     
-    CODE_GEN --> MGR
-    ENHANCE --> MGR
-    ANALYSIS --> MGR
-    REVIEW --> MGR
-    SEC_ANALYSIS --> MGR
-    SCRIPT_SELECT --> MGR
-    
-    MGR --> ROUTER
-    ROUTER --> MODEL_SELECT
-    MODEL_SELECT --> OLLAMA
-    
-    OLLAMA -.->|fail| FALLBACK
-    FALLBACK --> OPENAI
-    OPENAI -.->|fail| ANTHROPIC
-```
-
-## Security Architecture (Unified Security Service)
-
-```mermaid
-flowchart LR
-    subgraph "Unified Security Service"
-        USS[UnifiedSecurityService<br/>Orchestrator]
-        SCANNER_MGR[Scanner Manager]
-        VULN_MGR[Vulnerability Manager]
-    end
-    
-    subgraph "Scanner Types"
-        SAST[SAST Scanner<br/>CodeReviewer]
-        DEP[Dependency Scanner<br/>safety/npm audit]
-        CONTAINER[Container Scanner<br/>trivy]
-        SECRET[Secret Scanner<br/>gitleaks]
-        INFRA[Infrastructure Scanner<br/>checkov]
-        CUSTOM[Custom Scanners<br/>semgrep/bandit]
-    end
-    
-    subgraph "Analysis Flow"
-        FILES[Source Files]
-        DOCKER[Dockerfiles]
-        CONFIGS[Config Files]
-        DEPS[Dependencies]
-    end
-    
-    subgraph "Output"
-        VULNS[(Vulnerability<br/>Database)]
-        KG[(Knowledge Graph<br/>VULNERABILITY Nodes)]
-        REPORT[Security Report]
-        TASKS[Auto-generated<br/>Fix Tasks]
-    end
-    
-    FILES --> USS
-    DOCKER --> USS
-    CONFIGS --> USS
-    DEPS --> USS
-    
-    USS --> SCANNER_MGR
-    SCANNER_MGR --> SAST
-    SCANNER_MGR --> DEP
-    SCANNER_MGR --> CONTAINER
-    SCANNER_MGR --> SECRET
-    SCANNER_MGR --> INFRA
-    
-    SAST --> VULN_MGR
-    DEP --> VULN_MGR
-    CONTAINER --> VULN_MGR
-    SECRET --> VULN_MGR
-    INFRA --> VULN_MGR
-    
-    VULN_MGR --> VULNS
-    VULN_MGR --> KG
-    VULN_MGR --> REPORT
-    VULN_MGR --> TASKS
-```
-
-## Codebase Analysis Architecture
-
-```mermaid
-flowchart TB
-    subgraph "Analyzer Orchestrator"
-        ORCH[AnalyzerOrchestrator<br/>5-Phase Process]
-        PHASE1[Phase 1: Module Hierarchy]
-        PHASE2[Phase 2: Technology Stack]
-        PHASE3[Phase 3: File Nodes]
-        PHASE4[Phase 4: Content Analysis]
-        PHASE5[Phase 5: Relationships]
-    end
-    
-    subgraph "Language Analyzers"
-        PY[Python Analyzer<br/>Radon Metrics<br/>Business Logic]
-        JS[JavaScript Analyzer<br/>React Components<br/>TypeScript Support]
-        CSS[CSS/HTML Analyzer<br/>Styling & Structure]
-        CONFIG[Config Analyzer<br/>Package Detection<br/>Script Analysis]
-        TS[Tree-sitter Analyzer<br/>Universal AST]
-    end
-    
-    subgraph "Extracted Metadata"
-        IMPORTS[Import Graph]
-        EXPORTS[Export Map]
-        CLASSES[Class Hierarchy]
-        FUNCS[Function Calls]
-        DEPS[Dependencies]
-        METRICS[Code Metrics<br/>Complexity/Quality]
-        TECH_STACK[Technology Stack<br/>Dynamic Detection]
-    end
-    
-    subgraph "Knowledge Graph Updates"
-        FILE_NODES[FILE Nodes<br/>with Metadata]
-        MODULE_NODES[MODULE Nodes<br/>with Hierarchy]
-        TECH_NODES[TECHNOLOGY Nodes<br/>with Versions]
-        REL_EDGES[Relationship Edges<br/>IMPORTS/CALLS/CONTAINS]
-    end
-    
-    ORCH --> PHASE1
-    PHASE1 --> PHASE2
-    PHASE2 --> PHASE3
-    PHASE3 --> PHASE4
-    PHASE4 --> PHASE5
-    
-    PHASE4 --> PY
-    PHASE4 --> JS
-    PHASE4 --> CSS
-    PHASE4 --> CONFIG
-    PHASE4 --> TS
-    
-    PY --> IMPORTS
-    JS --> EXPORTS
-    PY --> CLASSES
-    JS --> FUNCS
-    CONFIG --> DEPS
-    PY --> METRICS
-    CONFIG --> TECH_STACK
-    
-    PHASE5 --> FILE_NODES
-    PHASE5 --> MODULE_NODES
-    PHASE5 --> TECH_NODES
-    PHASE5 --> REL_EDGES
-```
-
-## Container Configuration Intelligence
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Preview as Preview Service
-    participant ConfigSvc as Container Config Service
-    participant KG as Knowledge Graph
-    participant LLM as LLM Manager
-    participant Docker
-
-    User->>Preview: Start Preview (Custom)
-    Preview->>ConfigSvc: Generate Configuration
-    ConfigSvc->>KG: Get Project Data
-    KG-->>ConfigSvc: FILE Nodes, Tech Stack, Config
-    
-    ConfigSvc->>KG: Get package.json Scripts
-    KG-->>ConfigSvc: Script Commands
-    
-    alt Multiple Scripts Available
-        ConfigSvc->>LLM: Select Best Script
-        Note over LLM: Analyzes scripts for:<br/>- Dev server commands<br/>- Framework patterns<br/>- Environment suitability
-        LLM-->>ConfigSvc: Recommended Script
-    end
-    
-    ConfigSvc-->>Preview: Container Config<br/>with Smart Command
-    
-    Preview->>Docker: Create Container
-    Docker-->>Preview: Container Running
-    Preview-->>User: Preview URL
-```
-
-## WebSocket Event Architecture (Enhanced)
-
-```mermaid
-flowchart LR
-    subgraph "Event Sources"
-        TASK_SVC[Task Service]
-        GITHUB_SVC[GitHub Service]
-        SEC_SVC[Security Service]
-        KG_SVC[Knowledge Graph]
-        DEPLOY_SVC[Deployment Service]
-        SYSTEM[System Monitor]
-    end
-    
-    subgraph "Enhanced WebSocket Manager"
-        WS_MGR[WebSocket Manager<br/>Channel-based]
-        CONN_POOL[Connection Pool<br/>User Tracking]
-        MSG_FILTER[Message Filter<br/>Type-based]
-        DEBOUNCE[Event Debouncer<br/>Performance]
-    end
-    
-    subgraph "Event Channels"
-        subgraph "Task Channel"
-            TC[task_created]
-            TU[task_updated]
-            TP[task_progress]
-            TCO[task_completed]
-            TF[task_failed]
-        end
-        
-        subgraph "System Channel"
-            SH[system_health]
-            SS[service_status]
-            SA[security_alert]
-            KGU[knowledge_graph_update]
-        end
-        
-        subgraph "Deployment Channel"
-            DS[deployment_started]
-            DP[deployment_progress]
-            DC[deployment_completed]
-        end
-    end
-    
-    subgraph "Clients"
-        WEB1[Web Client 1<br/>Subscribed: tasks]
-        WEB2[Web Client 2<br/>Subscribed: all]
-        ADMIN[Admin Dashboard<br/>Subscribed: system]
-    end
-    
-    TASK_SVC --> WS_MGR
-    GITHUB_SVC --> WS_MGR
-    SEC_SVC --> WS_MGR
-    KG_SVC --> WS_MGR
-    
-    WS_MGR --> MSG_FILTER
-    MSG_FILTER --> DEBOUNCE
-    DEBOUNCE --> CONN_POOL
-    
-    CONN_POOL --> WEB1
-    CONN_POOL --> WEB2
-    CONN_POOL --> ADMIN
-```
-
-## Performance Architecture
-
-```mermaid
-flowchart TB
-    subgraph "Frontend Optimizations"
-        CONTEXTS[18 Optimized Contexts<br/>useMemoizedContextValue]
-        CALLBACKS[Stable Callbacks<br/>useStableCallback]
-        REFS[State Refs<br/>No Re-renders]
-        DEBOUNCE[WebSocket Debouncing]
-    end
-    
-    subgraph "Backend Optimizations"
-        CACHE[Redis Caching<br/>Knowledge Graph Queries]
-        BATCH[Batch Operations<br/>Bulk Node/Edge Creation]
-        POOL[Connection Pooling<br/>PG & Neo4j]
-        INDEXES[Database Indexes<br/>Optimized Queries]
-    end
-    
-    subgraph "Processing Optimizations"
-        QUEUES[Multi-Queue Celery<br/>Priority Routing]
-        PARALLEL[Parallel Analysis<br/>Concurrent File Processing]
-        RETRY[Smart Retry Logic<br/>Exponential Backoff]
-    end
-    
-    CONTEXTS --> CALLBACKS
-    CALLBACKS --> REFS
-    REFS --> DEBOUNCE
-    
-    CACHE --> BATCH
-    BATCH --> POOL
-    POOL --> INDEXES
-    
-    QUEUES --> PARALLEL
-    PARALLEL --> RETRY
+    CREATE --> SS
+    QUERY --> QS
+    ANALYZE --> AS
+    SEARCH --> ES
 ```
 
 ## Deployment Architecture
 
 ```mermaid
-flowchart TB
+graph TB
     subgraph "Development Environment"
-        LOCAL[Local Docker Compose<br/>All Services]
-        DEV_DB[(Development DBs)]
-        OLLAMA_LOCAL[Local Ollama]
+        DC[Docker Compose]
+        LOCAL[Local Services]
     end
     
-    subgraph "Docker Services"
-        subgraph "Core"
-            CORE[crewwork-core]
-            FRONTEND[crewwork-frontend]
-            NGINX[crewwork-nginx]
+    subgraph "Production Environment"
+        subgraph "Container Orchestration"
+            K8S[Kubernetes Cluster]
+            HELM[Helm Charts]
         end
         
-        subgraph "Workers"
-            WORKER[celery-worker<br/>+ repo volume]
-            BEAT[celery-beat]
-            FLOWER[flower]
+        subgraph "Load Balancing"
+            ALB[Application Load Balancer]
+            ING[Ingress Controller]
         end
         
-        subgraph "Data"
-            PG[postgres]
-            REDIS[redis]
-            NEO4J[neo4j]
+        subgraph "Data Persistence"
+            RDS[(RDS PostgreSQL)]
+            ELASTICACHE[(ElastiCache Redis)]
+            EFS[Elastic File System]
+        end
+        
+        subgraph "Monitoring"
+            PROM[Prometheus]
+            GRAF[Grafana]
+            ELK[ELK Stack]
         end
     end
     
-    subgraph "Volumes"
-        CODE_VOL[Source Code]
-        REPO_VOL[Repositories]
-        DATA_VOL[Database Data]
-        SECRETS[Secrets]
-    end
+    DC --> LOCAL
     
-    LOCAL --> CORE
-    CORE --> CODE_VOL
-    WORKER --> REPO_VOL
-    PG --> DATA_VOL
-    CORE --> SECRETS
+    ALB --> ING
+    ING --> K8S
+    
+    K8S --> RDS
+    K8S --> ELASTICACHE
+    K8S --> EFS
+    
+    K8S --> PROM
+    PROM --> GRAF
+    K8S --> ELK
 ```
+
+## Real-time Communication Architecture
+
+```mermaid
+graph LR
+    subgraph "Client Connections"
+        C1[Client 1]
+        C2[Client 2]
+        C3[Client N]
+    end
+    
+    subgraph "WebSocket Layer"
+        WSM[WebSocket Manager]
+        CONN[Connection Pool]
+        SUB[Subscription Manager]
+    end
+    
+    subgraph "Event System"
+        EB[Event Bus]
+        EH[Event Handlers]
+        ES[Event Store]
+    end
+    
+    subgraph "Event Types"
+        TE[Task Events]
+        DE[Deployment Events]
+        SE[System Events]
+        KE[Knowledge Events]
+    end
+    
+    C1 --> WSM
+    C2 --> WSM
+    C3 --> WSM
+    
+    WSM --> CONN
+    WSM --> SUB
+    
+    CONN --> EB
+    EB --> EH
+    EH --> ES
+    
+    TE --> EB
+    DE --> EB
+    SE --> EB
+    KE --> EB
+```
+
+## Security Architecture
+
+```mermaid
+graph TD
+    subgraph "Authentication Layer"
+        OAUTH[GitHub OAuth]
+        JWT[JWT Manager]
+        GUEST[Guest Access]
+    end
+    
+    subgraph "Authorization Layer"
+        RBAC[Role-Based Access]
+        PERM[Permission System]
+        ACL[Access Control Lists]
+    end
+    
+    subgraph "Security Services"
+        VAL[Input Validation]
+        SCAN[Security Scanner]
+        AUDIT[Audit Logger]
+        ENCRYPT[Encryption Service]
+    end
+    
+    subgraph "Network Security"
+        CORS[CORS Middleware]
+        RATE[Rate Limiter]
+        CSRF[CSRF Protection]
+        WAF[Web App Firewall]
+    end
+    
+    OAUTH --> JWT
+    GUEST --> JWT
+    JWT --> RBAC
+    
+    RBAC --> PERM
+    PERM --> ACL
+    
+    VAL --> SCAN
+    SCAN --> AUDIT
+    AUDIT --> ENCRYPT
+```
+
+## Data Flow Architecture
+
+```mermaid
+graph LR
+    subgraph "Data Sources"
+        CODE[Source Code]
+        TASKS[Task Data]
+        METRICS[System Metrics]
+        LOGS[Application Logs]
+    end
+    
+    subgraph "Processing Pipeline"
+        INGEST[Data Ingestion]
+        TRANSFORM[Transformation]
+        ENRICH[Enrichment]
+        STORE[Storage]
+    end
+    
+    subgraph "Analytics Layer"
+        REALTIME[Real-time Analytics]
+        BATCH[Batch Processing]
+        ML[Machine Learning]
+        REPORT[Reporting]
+    end
+    
+    subgraph "Outputs"
+        DASH[Dashboards]
+        ALERTS[Alerts]
+        INSIGHTS[Insights]
+        PREDICT[Predictions]
+    end
+    
+    CODE --> INGEST
+    TASKS --> INGEST
+    METRICS --> INGEST
+    LOGS --> INGEST
+    
+    INGEST --> TRANSFORM
+    TRANSFORM --> ENRICH
+    ENRICH --> STORE
+    
+    STORE --> REALTIME
+    STORE --> BATCH
+    STORE --> ML
+    
+    REALTIME --> DASH
+    BATCH --> REPORT
+    ML --> INSIGHTS
+    ML --> PREDICT
+    REALTIME --> ALERTS
+```
+
+## Scalability Architecture
+
+```mermaid
+graph TB
+    subgraph "Horizontal Scaling"
+        subgraph "API Instances"
+            API1[API Server 1]
+            API2[API Server 2]
+            APIN[API Server N]
+        end
+        
+        subgraph "Worker Instances"
+            W1[Worker 1]
+            W2[Worker 2]
+            WN[Worker N]
+        end
+    end
+    
+    subgraph "Vertical Scaling"
+        subgraph "Resource Allocation"
+            CPU[CPU Scaling]
+            MEM[Memory Scaling]
+            IO[I/O Optimization]
+        end
+    end
+    
+    subgraph "Auto-Scaling"
+        METRICS[Metrics Collection]
+        RULES[Scaling Rules]
+        TRIGGER[Scale Triggers]
+        PROVISION[Provisioning]
+    end
+    
+    LB[Load Balancer]
+    
+    LB --> API1
+    LB --> API2
+    LB --> APIN
+    
+    API1 --> W1
+    API2 --> W2
+    APIN --> WN
+    
+    METRICS --> RULES
+    RULES --> TRIGGER
+    TRIGGER --> PROVISION
+    
+    PROVISION --> CPU
+    PROVISION --> MEM
+    PROVISION --> IO
+```
+
+## Development Workflow
+
+```mermaid
+graph LR
+    subgraph "Developer Actions"
+        COMMIT[Git Commit]
+        PR[Pull Request]
+        REVIEW[Code Review]
+    end
+    
+    subgraph "CI/CD Pipeline"
+        BUILD[Build]
+        TEST[Test]
+        SCAN[Security Scan]
+        DEPLOY[Deploy]
+    end
+    
+    subgraph "CrewWork Integration"
+        ANALYZE[Code Analysis]
+        ENHANCE[AI Enhancement]
+        VALIDATE[Validation]
+        MONITOR[Monitoring]
+    end
+    
+    subgraph "Feedback Loop"
+        METRICS[Collect Metrics]
+        LEARN[Pattern Learning]
+        SUGGEST[Improvements]
+    end
+    
+    COMMIT --> BUILD
+    PR --> REVIEW
+    
+    BUILD --> TEST
+    TEST --> SCAN
+    SCAN --> DEPLOY
+    
+    BUILD --> ANALYZE
+    REVIEW --> ENHANCE
+    DEPLOY --> VALIDATE
+    VALIDATE --> MONITOR
+    
+    MONITOR --> METRICS
+    METRICS --> LEARN
+    LEARN --> SUGGEST
+    SUGGEST --> COMMIT
+```
+
+## Component Dependencies
+
+```mermaid
+graph TD
+    subgraph "Frontend Dependencies"
+        REACT[React 18]
+        TS[TypeScript]
+        VITE[Vite]
+        ARIA[React Aria]
+        TAIL[Tailwind CSS]
+    end
+    
+    subgraph "Backend Dependencies"
+        PYTHON[Python 3.12]
+        FAST[FastAPI]
+        SQLA[SQLAlchemy]
+        CEL[Celery]
+        REDIS[Redis-py]
+    end
+    
+    subgraph "Infrastructure Dependencies"
+        DOCKER[Docker]
+        NGINX[Nginx]
+        PG[PostgreSQL]
+        REDIS_SERVER[Redis Server]
+    end
+    
+    subgraph "AI/ML Dependencies"
+        OLLAMA[Ollama]
+        OPENAI_SDK[OpenAI SDK]
+        ANTHROPIC_SDK[Anthropic SDK]
+        INSTRUCTOR[Instructor]
+    end
+    
+    REACT --> TS
+    VITE --> REACT
+    ARIA --> REACT
+    TAIL --> VITE
+    
+    FAST --> PYTHON
+    SQLA --> PYTHON
+    CEL --> REDIS
+    
+    DOCKER --> NGINX
+    DOCKER --> PG
+    DOCKER --> REDIS_SERVER
+    
+    INSTRUCTOR --> OPENAI_SDK
+    INSTRUCTOR --> ANTHROPIC_SDK
+```
+
+## Error Handling Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant Service
+    participant ErrorHandler
+    participant ErrorRecovery
+    participant Monitoring
+    
+    Client->>API: Request
+    API->>Service: Process
+    
+    Service-->>Service: Exception Occurs
+    Service->>ErrorHandler: Handle Error
+    
+    ErrorHandler->>ErrorRecovery: Attempt Recovery
+    
+    alt Recovery Successful
+        ErrorRecovery-->>Service: Retry Operation
+        Service-->>API: Success Response
+        API-->>Client: 200 OK
+    else Recovery Failed
+        ErrorRecovery-->>ErrorHandler: Recovery Failed
+        ErrorHandler->>Monitoring: Log Error
+        ErrorHandler-->>API: Error Response
+        API-->>Client: Error Status
+    end
+    
+    Monitoring->>Monitoring: Track Error Patterns
+    Monitoring->>ErrorRecovery: Update Recovery Strategies
+```
+
+## Performance Optimization Strategy
+
+```mermaid
+graph TB
+    subgraph "Caching Strategy"
+        L1[Memory Cache]
+        L2[Redis Cache]
+        L3[Database Cache]
+    end
+    
+    subgraph "Query Optimization"
+        IDX[Database Indexes]
+        POOL[Connection Pooling]
+        BATCH[Batch Operations]
+        LAZY[Lazy Loading]
+    end
+    
+    subgraph "Async Processing"
+        ASYNC[Async I/O]
+        QUEUE[Task Queues]
+        WORKER[Worker Pools]
+        STREAM[Stream Processing]
+    end
+    
+    subgraph "Resource Management"
+        LIMIT[Rate Limiting]
+        THROTTLE[Throttling]
+        CIRCUIT[Circuit Breakers]
+        BACKOFF[Exponential Backoff]
+    end
+    
+    REQUEST[Incoming Request]
+    
+    REQUEST --> L1
+    L1 --> L2
+    L2 --> L3
+    
+    L3 --> IDX
+    IDX --> POOL
+    POOL --> BATCH
+    BATCH --> LAZY
+    
+    LAZY --> ASYNC
+    ASYNC --> QUEUE
+    QUEUE --> WORKER
+    WORKER --> STREAM
+    
+    STREAM --> LIMIT
+    LIMIT --> THROTTLE
+    THROTTLE --> CIRCUIT
+    CIRCUIT --> BACKOFF
+```
+
+This architecture represents a sophisticated, production-ready system designed for scalability, reliability, and intelligent automation. The microservices architecture allows for independent scaling and deployment, while the knowledge graph provides deep code understanding capabilities that power the AI-driven features.
